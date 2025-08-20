@@ -3,9 +3,7 @@
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Tuple
-
-from .features import core as fcore
-
+from ..features import core as fcore
 # ===================================================================
 # PRIMITIVE SIGNAL GRAMMAR
 # This defines the set of rules for converting a continuous feature
@@ -46,7 +44,7 @@ def compile_signals(feature_matrix: pd.DataFrame) -> Tuple[pd.DataFrame, List[Di
         - A DataFrame where each column is a binary signal Series.
         - A list of metadata dictionaries, one for each signal, describing how it was created.
     """
-    print("🚀 Compiling primitive signals from feature matrix...")
+    print("Compiling primitive signals from feature matrix...")
 
     all_signal_series: Dict[str, pd.Series] = {}
     all_signal_metadata: List[Dict] = []

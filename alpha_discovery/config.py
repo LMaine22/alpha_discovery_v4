@@ -7,10 +7,10 @@ from datetime import date
 class GaConfig(BaseModel):
     """Genetic Algorithm Search Parameters"""
     population_size: int = 100
-    generations: int = 20
+    generations: int = 15
     elitism_rate: float = 0.1
     mutation_rate: float = 0.2
-    seed: int = 67
+    seed: int = 68
     setup_lengths_to_explore: List[int] = [2, 3]
 
 class DataConfig(BaseModel):
@@ -18,8 +18,8 @@ class DataConfig(BaseModel):
     excel_file_path: str = 'data_store/raw/bb_data.xlsx'
     parquet_file_path: str = 'data_store/processed/bb_data.parquet'
     start_date: date = date(2010, 1, 1)
-    end_date: date = date(2025, 8, 12)
-    holdout_start_date: date = date(2023, 8, 12)
+    end_date: date = date(2025, 8, 19)
+    holdout_start_date: date = date(2023, 8, 19)
 
     # Finalized ticker lists
     tradable_tickers: List[str] = [

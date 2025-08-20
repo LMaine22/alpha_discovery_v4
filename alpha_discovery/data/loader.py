@@ -22,7 +22,7 @@ def convert_excel_to_parquet():
         print(f" Error: Excel file not found at '{excel_path}'")
         return
 
-    print(f"⏳ Loading Excel file from '{excel_path}'...")
+    print(f" Loading Excel file from '{excel_path}'...")
     try:
         xls = pd.ExcelFile(excel_path)
 
@@ -81,9 +81,9 @@ def load_data_from_parquet() -> pd.DataFrame:
         print("Please run the conversion from Excel first.")
         return pd.DataFrame()
 
-    print(f"🚀 Loading data from '{parquet_path}'...")
+    print(f"Loading data from '{parquet_path}'...")
     df = pd.read_parquet(parquet_path)
-    print(f"✅ Data loaded successfully. Shape: {df.shape}")
+    print(f"Data loaded successfully. Shape: {df.shape}")
     return df
 
 
