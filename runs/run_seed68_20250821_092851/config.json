@@ -1,0 +1,87 @@
+{
+    "ga": {
+        "population_size": 20,
+        "generations": 3,
+        "elitism_rate": 0.1,
+        "mutation_rate": 0.2,
+        "seed": 68,
+        "setup_lengths_to_explore": [
+            2,
+            3
+        ]
+    },
+    "data": {
+        "excel_file_path": "data_store/raw/bb_data.xlsx",
+        "parquet_file_path": "data_store/processed/bb_data.parquet",
+        "start_date": "2010-01-01",
+        "end_date": "2025-08-19",
+        "holdout_start_date": "2023-08-19",
+        "tradable_tickers": [
+            "XLE US Equity",
+            "XLK US Equity",
+            "XLRE US Equity",
+            "XLC US Equity",
+            "XLV US Equity",
+            "XLP US Equity",
+            "SPY US Equity",
+            "QQQ US Equity",
+            "CRWV US Equity",
+            "TSLA US Equity",
+            "AMZN US Equity",
+            "GOOGL US Equity",
+            "MSFT US Equity",
+            "AAPL US Equity",
+            "LLY US Equity",
+            "JPM US Equity",
+            "C US Equity",
+            "PLTR US Equity",
+            "ARM US Equity",
+            "AMD US Equity",
+            "BMY US Equity",
+            "PEPS US Equity",
+            "NKE US Equity",
+            "WMT US Equity",
+            "MSTR US Equity",
+            "COIN US Equity",
+            "BTC Index"
+        ],
+        "macro_tickers": [
+            "SPX Index",
+            "NDX Index",
+            "RTY Index",
+            "MXWO Index",
+            "USGG10YR Index",
+            "USGG2YR Index",
+            "DXY Curncy",
+            "JPY Curncy",
+            "EUR Curncy",
+            "EEM US Equity",
+            "CL1 Comdty",
+            "HG1 Comdty",
+            "XAU Curncy"
+        ]
+    },
+    "validation": {
+        "min_initial_support": 5,
+        "min_final_support": 8,
+        "embargo_days": 5
+    },
+    "options": {
+        "capital_per_trade": 10000.0,
+        "contract_multiplier": 100,
+        "tenor_days": 63,
+        "risk_free_rate_mode": "constant",
+        "constant_r": 0.0,
+        "allow_nonoptionable": false
+    },
+    "selection": {
+        "top_n_tickers": 5,
+        "min_distinct_tickers": 3,
+        "metric_primary": "sharpe_lb",
+        "metric_tiebreakers": [
+            "omega_ratio",
+            "support"
+        ],
+        "min_support_per_ticker": 8
+    }
+}

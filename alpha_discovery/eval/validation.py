@@ -1,56 +1,88 @@
 # alpha_discovery/eval/validation.py
 
 import pandas as pd
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from ..config import settings
 
 
+Number = Union[int, float]
+
+
+def _years_to_months(years: Number) -> int:
+    """
+    Convert (possibly fractional) years to whole months.
+    Example: 0.5 -> 6, 3 -> 36.
+    Rounds to nearest integer month for stability.
+    """
+    months = int(round(float(years) * 12))
+    return max(months, 1)
+
+
 def create_walk_forward_splits(
         data_index: pd.DatetimeIndex,
-        train_years: int = 3,
-        test_years: int = 1,
+        train_years: Number = 3,
+        test_years: Number = 1,
         step_months: int = 6
 ) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
     """
     Creates a list of training and testing splits for walk-forward validation.
 
-    This function generates rolling windows of data. For each window, it defines
-    a training period and a subsequent, non-overlapping testing period. It also
-    enforces an "embargo" period between train and test to prevent data leakage.
+    Behavior:
+      1) Generate standard forward-rolling splits with FIXED test length.
+         Only full test windows are included.
+      2) Then append ONE extra split that is BACK-ALIGNED to end exactly
+         at the last available date in data_index, with the same fixed test length,
+         provided a valid training window (with embargo) exists and this split
+         is not a duplicate of the last forward split.
 
     Args:
         data_index: The complete DatetimeIndex of the dataset.
-        train_years: The length of each training period in years.
-        test_years: The length of each testing period in years.
-        step_months: How many months to roll the window forward for each new split.
+        train_years: Training period length in YEARS (int or float).
+        test_years:  Testing period length in YEARS (int or float).
+        step_months: Step (months) to roll the window forward each split.
 
     Returns:
-        A list of tuples, where each tuple contains (train_index, test_index).
+        A list of tuples: (train_index, test_index).
+
+    Notes:
+        - Fractional years are converted to whole months via rounding.
+        - Windows are half-open intervals: [start, end)
+        - Embargo days are enforced between train_end and test_start.
     """
-    splits = []
+    splits: List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]] = []
+
+    if data_index.empty:
+        print(" Warning: data_index is empty; no splits can be created.")
+        return splits
 
     start_date = data_index.min()
     end_date = data_index.max()
 
-    train_period = pd.DateOffset(years=train_years)
-    test_period = pd.DateOffset(years=test_years)
-    step_period = pd.DateOffset(months=step_months)
-    embargo_period = pd.DateOffset(days=settings.validation.embargo_days)
+    # Convert year lengths to month-based DateOffsets
+    train_months = _years_to_months(train_years)
+    test_months = _years_to_months(test_years)
+
+    train_period = pd.DateOffset(months=train_months)
+    test_period = pd.DateOffset(months=test_months)
+    step_period = pd.DateOffset(months=int(step_months))
+    embargo_period = pd.DateOffset(days=int(settings.validation.embargo_days))
 
     current_start = start_date
 
     print("\n--- Creating Walk-Forward Splits ---")
+    # -------------------------------
+    # 1) Standard forward-rolling splits (full test windows only)
+    # -------------------------------
     while True:
         train_end = current_start + train_period
         test_start = train_end + embargo_period
-        test_end = test_start + test_period
+        test_end = test_start + test_period  # exclusive bound
 
-        # Ensure the entire split is within the bounds of the data
+        # Require full test window within bounds
         if test_end > end_date:
             break
 
-        # Select the actual data indices for this split
         train_indices = data_index[(data_index >= current_start) & (data_index < train_end)]
         test_indices = data_index[(data_index >= test_start) & (data_index < test_end)]
 
@@ -62,8 +94,48 @@ def create_walk_forward_splits(
                 f"Test ({test_indices.min().date()} to {test_indices.max().date()})"
             )
 
-        # Move the window forward for the next split
-        current_start += step_period
+        next_start = current_start + step_period
+        if next_start <= current_start:
+            break
+        current_start = next_start
+
+    # -------------------------------
+    # 2) Back-aligned final full window
+    # -------------------------------
+    # We force the final test window to end at data_end (inclusive),
+    # keeping the SAME test length. Because our selection is [start, end),
+    # use test_end_exclusive = end_date + 1 day to include end_date.
+    try:
+        test_end_exclusive = end_date + pd.DateOffset(days=1)
+        test_start_back = test_end_exclusive - test_period  # same fixed length
+        # Enforce embargo: training must end before the test (with embargo gap)
+        train_end_back = test_start_back - embargo_period
+        train_start_back = train_end_back - train_period
+
+        # Build indices
+        train_idx_back = data_index[(data_index >= train_start_back) & (data_index < train_end_back)]
+        test_idx_back = data_index[(data_index >= test_start_back) & (data_index < test_end_exclusive)]
+
+        # Valid if both sides have data, and training window is not empty
+        if not train_idx_back.empty and not test_idx_back.empty:
+            # Avoid adding a duplicate of the last forward split
+            is_duplicate = False
+            if splits:
+                last_train, last_test = splits[-1]
+                if (not last_test.empty and
+                        last_test.min() == test_idx_back.min() and
+                        last_test.max() == test_idx_back.max()):
+                    is_duplicate = True
+
+            if not is_duplicate:
+                splits.append((train_idx_back, test_idx_back))
+                print(
+                    f"Created Back-Aligned Final Split: "
+                    f"Train ({train_idx_back.min().date()} to {train_idx_back.max().date()}), "
+                    f"Test ({test_idx_back.min().date()} to {test_idx_back.max().date()})"
+                )
+    except Exception as e:
+        print(f" Warning: could not create back-aligned final split: {e}")
 
     print(f"Generated {len(splits)} walk-forward splits.")
     return splits
